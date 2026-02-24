@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 import hashlib
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, SessionLocal, Base
-from models import Document
+from models import Document, Chunk
 from schemas import DocumentCreate
+from services.chunking import paragraph_chunking
 
 Base.metadata.create_all(bind=engine)
 
@@ -55,5 +56,25 @@ def capture_document(doc: DocumentCreate, db: Session = Depends(get_db)):
     db.add(new_doc)
     db.commit()
     db.refresh(new_doc)
+    
+    # Generating Chunks
+    chunk_texts = paragraph_chunking(new_doc.content)
+    print("Chunk count:", len(chunk_texts))
+    
+    chunk_objects = []
+    for index, chunk_text in enumerate(chunk_texts):
+        chunk = Chunk(
+            document_id=new_doc.id,
+            chunk_index=index,
+            content=chunk_text,
+            char_length=len(chunk_text)
+        )
+        chunk_objects.append(chunk)
+    db.bulk_save_objects(chunk_objects)
+    db.commit()
 
-    return {"status": "stored", "id": new_doc.id}
+    return {
+        "status": "stored",
+        "id": new_doc.id,
+        "chunks_created": len(chunk_objects)
+    }
