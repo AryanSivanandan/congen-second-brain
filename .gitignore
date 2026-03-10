@@ -1,0 +1,64 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Python environment files
+# =========================
+.env
+.env.*
+
+# =========================
+# Node (future extension tooling)
+# =========================
+node_modules/
+
+# =========================
+# NLTK downloads
+# =========================
+nltk_data/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

@@ -4,8 +4,11 @@ import hashlib
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, SessionLocal, Base
 from models import Document, Chunk
-from schemas import DocumentCreate
+from schemas import DocumentCreate, QueryRequest, QueryResponse
 from services.chunking import paragraph_chunking
+from services.embedding import embed_query, embed_text
+import json 
+from sklearn.metrics.pairwise import cosine_similarity
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,6 +33,32 @@ def get_db():
 def compute_hash(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
+@app.post("/query")
+def query_memory(req: QueryRequest, db: Session = Depends(get_db)):
+
+    query_embedding = embed_query(req.query)
+
+    chunks = db.query(Chunk).all()
+
+    results = []
+
+    for chunk in chunks:
+
+        chunk_embedding = json.loads(chunk.embedding)
+
+        similarity = cosine_similarity(
+            [query_embedding],
+            [chunk_embedding]
+        )[0][0]
+
+        results.append({
+            "chunk": chunk.content,
+            "similarity": similarity
+        })
+
+    results.sort(key=lambda x: x["similarity"], reverse=True)
+
+    return results[:5]
 
 @app.post("/capture")
 def capture_document(doc: DocumentCreate, db: Session = Depends(get_db)):
@@ -63,14 +92,21 @@ def capture_document(doc: DocumentCreate, db: Session = Depends(get_db)):
     
     chunk_objects = []
     for index, chunk_text in enumerate(chunk_texts):
+
+        embedding = embed_text(chunk_text)
+
         chunk = Chunk(
             document_id=new_doc.id,
             chunk_index=index,
             content=chunk_text,
+            embedding=json.dumps(embedding),
             char_length=len(chunk_text)
         )
         chunk_objects.append(chunk)
-    db.bulk_save_objects(chunk_objects)
+    
+    for c in chunk_objects:
+        db.add(c)
+
     db.commit()
 
     return {

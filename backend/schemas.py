@@ -9,3 +9,10 @@ class DocumentCreate(BaseModel):
     excerpt: str | None = None
     word_count: int
     captured_at: datetime
+
+class QueryRequest(BaseModel):
+    query: str
+
+class QueryResponse(BaseModel):
+    chunk: str 
+    similarity: float
