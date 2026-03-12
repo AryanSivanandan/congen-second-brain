@@ -40,6 +40,7 @@ class Chunk(Base):
     content = Column(Text, nullable=False)
     char_length = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
+    embedding = Column(Text)
 
     __table_args__ = (
         UniqueConstraint("document_id", "chunk_index", name="uix_doc_chunk_index"),

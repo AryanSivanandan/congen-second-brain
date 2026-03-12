@@ -1,55 +1,192 @@
 # Congen Second Brain
 
-Congen Second Brain is a local-first research capture and semantic ingestion system designed to transform web content into structured, retrieval-ready memory.
 
-The system consists of:
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-green)
+![License](https://img.shields.io/badge/license-MIT-orange)
 
-- A Firefox browser extension for article capture  
-- A FastAPI backend for ingestion  
-- A relational database layer (SQLite)  
-- Deterministic paragraph-based chunking  
-- Structured chunk persistence  
+Congen Second Brain is a local-first semantic knowledge system that captures web content, converts it into structured chunks, generates embeddings, and enables meaning-based search over your personal research archive.
 
-It serves as a foundational layer for future embedding and semantic retrieval functionality.
+The system turns saved articles into a searchable memory engine that can retrieve information based on semantic similarity rather than keywords.
 
 ---
 
-## Current Features
+## Key Capabilities
 
-### Browser-Based Article Capture
-
-- Full-page extraction using Mozilla Readability  
-- Keyboard shortcut support  
-- Structured JSON payload generation  
-- Basic content quality validation (length-based)  
-
-### Backend Ingestion API
-
-- FastAPI-based `/capture` endpoint  
-- SHA-256 content hashing for duplicate detection  
-- Schema validation using Pydantic  
-- CORS configuration for extension communication  
-
-### Relational Persistence Layer
-
-- SQLite database  
-- Normalized `documents` table  
-- Separate `chunks` table  
-- Proper foreign key relationships  
-- Cascade deletion support  
-- Deterministic chunk indexing  
-
-### Paragraph-Based Chunking
-
-- Splits content at paragraph boundaries  
-- Fallback to sentence splitting for oversized paragraphs  
-- Fixed maximum chunk size  
-- Stable deterministic ordering  
-- Stored per document with unique `(document_id, chunk_index)` constraint  
+- Browser-based article capture
+- Automatic document ingestion
+- Paragraph-based semantic chunking
+- Embedding generation using BGE-small
+- Vector similarity search over stored knowledge
+- Local-first architecture
 
 ---
 
-## Architecture
+## Example Semantic Query
+
+Query:
+
+```
+types of cats
+```
+
+Result:
+
+```
+Canada lynx
+Eurasian lynx
+Iberian lynx
+Cheetah
+Jaguarundi
+Cougar
+Leopard cat lineage
+Domestic cat lineage
+```
+
+The system retrieves semantically relevant knowledge rather than exact keyword matches.
+
+---
+
+## Quickstart
+
+Clone the repository:
+
+```
+git clone https://github.com/your-username/congen-second-brain.git
+cd congen-second-brain/backend
+```
+
+Create a virtual environment:
+
+```
+python -m venv venv
+venv\Scripts\activate
+```
+
+Install dependencies:
+
+```
+pip install fastapi uvicorn sqlalchemy pydantic nltk python-multipart sentence-transformers numpy
+```
+
+Run the backend:
+
+```
+uvicorn main:app --reload
+```
+
+Open the API docs:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+The system currently consists of:
+
+- A Firefox browser extension for article capture
+- A FastAPI backend for ingestion
+- A relational database layer (SQLite)
+- Deterministic paragraph-based chunking
+- Semantic embedding generation
+- Vector-based similarity retrieval
+
+The goal of the project is to build the foundation for a personal AI knowledge system capable of semantic retrieval, topic linking, and long-term research memory.
+
+---
+
+# Features
+
+## Browser-Based Article Capture
+
+The Firefox extension enables capturing long-form web content directly from the browser.
+
+Capabilities include:
+
+- Full-page extraction using Mozilla Readability
+- Keyboard shortcut based capture
+- Structured JSON payload generation
+- Basic content validation before ingestion
+
+Captured articles are sent to the backend ingestion API.
+
+---
+
+## Backend Ingestion API
+
+The backend service is built with FastAPI and processes captured articles.
+
+Key functionality:
+
+- `/capture` endpoint for ingestion
+- SHA-256 content hashing for duplicate detection
+- Schema validation using Pydantic
+- CORS configuration for browser extension communication
+
+Captured documents are stored and automatically processed for chunking and embedding.
+
+---
+
+## Deterministic Paragraph Chunking
+
+Articles are split into structured chunks before embedding.
+
+Chunking strategy:
+
+- Paragraph-based segmentation
+- Sentence fallback for oversized paragraphs
+- Maximum character threshold per chunk
+- Deterministic chunk ordering
+- Unique `(document_id, chunk_index)` constraint
+
+This produces semantically meaningful text segments suitable for embedding.
+
+---
+
+## Semantic Embedding Layer
+
+Each chunk is converted into a semantic vector representation using the model:
+
+`BAAI/bge-small-en-v1.5`
+
+Embeddings allow the system to perform semantic search rather than relying on keyword matching.
+
+Each chunk stores:
+
+- chunk text
+- metadata
+- embedding vector
+
+---
+
+## Semantic Retrieval API
+
+The backend exposes a semantic query endpoint.
+
+```
+POST /query
+```
+
+Query workflow:
+
+```
+User query
+    ↓
+Query embedding generation
+    ↓
+Cosine similarity against stored chunk embeddings
+    ↓
+Rank results
+    ↓
+Return top relevant chunks
+```
+
+This enables knowledge retrieval based on meaning rather than exact words.
+
+---
+
+# Architecture
 
 ```
 Firefox Extension
@@ -58,16 +195,22 @@ Background Script
         ↓
 POST /capture
         ↓
+FastAPI Backend
+        ↓
 Document Storage (SQLite)
         ↓
-Paragraph Chunking Service
+Paragraph Chunking
         ↓
-Chunk Storage (Relational)
+Embedding Generation
+        ↓
+Chunk + Vector Storage
+        ↓
+Semantic Query (/query)
 ```
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```
 congen-second-brain/
@@ -87,42 +230,44 @@ congen-second-brain/
 │   ├── schemas.py
 │   ├── database.py
 │   ├── services/
-│   │   └── chunking.py
-│   └── venv/
+│   │   ├── chunking.py
+│   │   └── embedding.py
 │
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## Database Schema
+# Database Schema
 
-### `documents` Table
+## documents
 
-| Field        | Type     | Notes                                  |
-|-------------|----------|------------------------------------------|
-| id          | Integer  | Primary key                             |
-| url         | String   | Indexed                                 |
-| title       | String   |                                          |
-| byline      | String   | Nullable                                 |
-| content     | Text     | Full raw article                        |
-| excerpt     | Text     | Nullable                                 |
-| word_count  | Integer  |                                          |
-| content_hash| String   | Unique, used for deduplication           |
-| captured_at | DateTime |                                          |
+| Field | Type | Notes |
+|------|------|------|
+| id | Integer | Primary key |
+| url | String | Indexed |
+| title | String | |
+| byline | String | Nullable |
+| content | Text | Raw article |
+| excerpt | Text | Nullable |
+| word_count | Integer | |
+| content_hash | String | Unique deduplication |
+| captured_at | DateTime | |
 
 ---
 
-### `chunks` Table
+## chunks
 
-| Field        | Type     | Notes                                  |
-|-------------|----------|------------------------------------------|
-| id          | Integer  | Primary key                             |
-| document_id | Integer  | Foreign key → documents.id              |
-| chunk_index | Integer  | Order preserved                         |
-| content     | Text     | Chunk text                              |
-| char_length | Integer  | Length metadata                         |
-| created_at  | DateTime | Timestamp                               |
+| Field | Type | Notes |
+|------|------|------|
+| id | Integer | Primary key |
+| document_id | Integer | Foreign key |
+| chunk_index | Integer | Order within document |
+| content | Text | Chunk text |
+| char_length | Integer | Length metadata |
+| embedding | Text | Vector embedding |
+| created_at | DateTime | Timestamp |
 
 Constraint:
 
@@ -132,52 +277,60 @@ Unique(document_id, chunk_index)
 
 ---
 
-## Setup Instructions
+# Setup
 
-### 1. Clone Repository
+## Clone Repository
 
-```bash
+```
 git clone https://github.com/your-username/congen-second-brain.git
 cd congen-second-brain/backend
 ```
 
-### 2. Create Virtual Environment
+---
 
-```bash
+## Create Virtual Environment
+
+```
 python -m venv venv
 venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+---
 
-```bash
-pip install fastapi uvicorn sqlalchemy pydantic nltk python-multipart
+## Install Dependencies
+
+```
+pip install fastapi uvicorn sqlalchemy pydantic nltk python-multipart sentence-transformers numpy
 ```
 
-### 4. Download NLTK Tokenizer
+---
+
+## Download NLTK Tokenizer
 
 Start Python:
 
-```bash
+```
 python
 ```
 
 Then run:
 
-```python
+```
 import nltk
 nltk.download('punkt')
 ```
 
 Exit Python.
 
-### 5. Run Backend
+---
 
-```bash
+## Run Backend
+
+```
 uvicorn main:app --reload
 ```
 
-Backend runs at:
+Backend will run at:
 
 ```
 http://127.0.0.1:8000
@@ -191,7 +344,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## Loading the Firefox Extension
+# Loading the Firefox Extension
 
 1. Open:
 
@@ -199,13 +352,21 @@ http://127.0.0.1:8000/docs
 about:debugging
 ```
 
-2. Click **Load Temporary Add-on**
+2. Click:
 
-3. Select `manifest.json` inside the `extension/` directory
+```
+Load Temporary Add-on
+```
+
+3. Select:
+
+```
+extension/manifest.json
+```
 
 ---
 
-## Usage
+# Usage
 
 Press:
 
@@ -215,17 +376,36 @@ Ctrl + Shift + Y
 
 The system will:
 
-1. Extract article content  
-2. Send data to backend  
-3. Store the document  
-4. Generate paragraph-based chunks  
-5. Persist chunks to the database  
+1. Extract article content
+2. Send data to backend
+3. Store the document
+4. Generate chunks
+5. Create embeddings
+6. Persist semantic vectors
 
 ---
 
-## Verifying Storage
+# Querying Stored Knowledge
 
-Use DB Browser for SQLite.
+Example request:
+
+```
+POST /query
+```
+
+```
+{
+  "query": "types of cats"
+}
+```
+
+The system returns the most semantically relevant stored chunks.
+
+---
+
+# Verifying Storage
+
+You can inspect stored data using DB Browser for SQLite.
 
 Open:
 
@@ -235,65 +415,58 @@ backend/second_brain.db
 
 Verify:
 
-- `documents` table is populated  
-- `chunks` table contains multiple rows per document  
-- `chunk_index` increments sequentially  
+- `documents` table contains captured articles
+- `chunks` table contains chunked segments
+- embeddings are stored for each chunk
 
 ---
 
-## Design Principles
+# Design Principles
 
-This system follows:
+The system is designed around the following principles:
 
-- Deterministic chunking  
-- Clear separation of concerns  
-- Service-layer architecture  
-- Relational normalization  
-- Extensibility-first design  
+- Deterministic chunking
+- Clear separation of concerns
+- Service-layer architecture
+- Relational normalization
+- Extensibility-first design
 
-Chunking logic is isolated in:
+Chunking logic is isolated inside:
 
 ```
-services/chunking.py
+backend/services/chunking.py
 ```
 
-The backend is structured to remain independent of future embedding or vector layers.
+Embedding logic is implemented inside:
+
+```
+backend/services/embedding.py
+```
 
 ---
 
-## Why Chunking Matters
+# Current Status
 
-Embedding models operate more effectively on smaller semantic units rather than full documents.
+The following pipeline is fully implemented:
 
-Instead of embedding entire articles, this system:
+- Article capture via browser extension
+- Backend ingestion
+- Duplicate detection
+- Deterministic paragraph chunking
+- Embedding generation
+- Semantic similarity search
 
-- Segments content into paragraph-aware chunks  
-- Preserves chunk order using `chunk_index`  
-- Prepares each chunk for future vector embedding  
-
-This enables:
-
-- Fine-grained semantic retrieval  
-- Improved RAG performance  
-- Efficient indexing strategies  
+The system now functions as a **local semantic research memory engine**.
 
 ---
 
-## Planned Next Steps
+# Future Work
 
-- Embedding generation per chunk  
-- Vector storage integration  
-- Semantic retrieval endpoint  
-- Query-based RAG interface  
-- Local-first embedding provider support  
+Planned improvements include:
 
----
-
-## Current Status
-
-- End-to-end ingestion working  
-- Deduplication implemented  
-- Chunk persistence verified  
-- Stable relational structure  
-
-The system is now prepared for embedding layer integration.
+- Vector indexing (FAISS or HNSW)
+- Topic clustering
+- Knowledge graph construction
+- Cross-document summarization
+- Multi-device synchronization
+- AI-assisted research queries
